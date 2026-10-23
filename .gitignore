@@ -1,0 +1,10 @@
+.openai/
+.git-credentials
+.env
+.env.*
+node_modules/
+.sites-*
+work/
+*.bak
+.DS_Store
+Thumbs.db
