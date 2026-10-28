@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#122e32">
+<meta name="description" content="建材智途 AI — 施工现场建材搬运路径规划与物料调度工作台"><title>建材智途 AI · 场内物流工作台</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="style.css">
+</head><body>
+<a class="skip-link" href="#main">跳至主要内容</a>
+<aside class="sidebar" aria-label="项目导航">
+<a class="brand" href="#overview"><span class="brandmark">途</span><div>建材智途 <b>AI</b><small>SITE LOGISTICS STUDIO</small></div></a>
+<div class="workspace"><span class="project-avatar">建</span><div><strong id="workspaceName"></strong><small id="workspacePhase"></small></div></div>
+<div class="nav-label">项目工作空间</div><nav id="nav"></nav>
+<div class="side-bottom"><span class="version-dot"></span>当前方案 <b id="sideVersion"></b><p id="sideSize"></p><div class="demo">轻量建模 · 现场协同</div><small>公网工作空间 / 独立项目</small></div>
+</aside>
+<div class="app">
+<header><div class="breadcrumbs"><span class="crumb">项目空间</span><span class="slash">/</span><span id="breadcrumb"></span></div><div class="header-right"><span class="save-status" id="saveStatus" role="status"></span><button class="icon-button" id="help" aria-label="使用帮助">?</button><button class="btn small" id="account" type="button">连接中…</button></div></header>
+<main id="main" tabindex="-1" inert aria-busy="true"></main>
+<footer><span><i class="status-dot"></i>云端项目 · 支持跨设备访问</span><span>建材智途 AI <b>3.0</b></span></footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="dialog" aria-labelledby="dialogTitle"><button class="close" id="closeDialog" aria-label="关闭对话框">×</button><div id="dialogBody"></div></dialog>
+<input id="projectFile" type="file" accept=".json,application/json" hidden>
+<script src="core.js"></script><script src="cloud.js"></script><script src="workspace.js"></script><script src="account.js"></script>
+</body></html>
