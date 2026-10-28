@@ -8,6 +8,13 @@
       "when": 1793162738179,
       "tag": "0000_ordinary_red_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793175582886,
+      "tag": "0001_fixed_jasper_sitwell",
+      "breakpoints": true
     }
   ]
 }

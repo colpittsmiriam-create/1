@@ -1,6 +1,8 @@
-# 建材智途 AI 公网版 3.0
+# 建材智途 AI 公网版 4.0
 
-在线访问：[建材智途 AI 公网工作台](https://jiancai-zhitu-ai-20261028.expertjam32.chatgpt.site)
+在线访问：[建材智途 AI](https://jiancai-zhitu-ai-20261028.expertjam32.chatgpt.site)。
+
+4.0 已补齐分层后端、18 张数据库表、实体 API、方案状态流程、协作角色、审计及统一中间件。设计文档见 [后端架构与数据库设计](docs/后端架构与数据库设计.md)，接口示例见 [接口使用示例](docs/接口使用示例.md)。
 
 建材智途 AI 的公网应用源码。沿用六个业务页面，增加平台登录、账号隔离、云端项目与底图存储、并发版本检查和项目归档恢复。
 
@@ -25,7 +27,10 @@
 | 云端同步 | `public/platform/cloud.js`，串行保存、账号草稿、版本冲突、断线重试 |
 | 账号与项目管理 | `public/platform/account.js` |
 | API 路由 | `app/api/[[...segments]]/route.ts` |
-| 业务与鉴权 | `lib/project-api.mjs`，每次按登录身份查询归属 |
+| API 与中间件 | `lib/http/`，身份、限流、幂等、安全头、追踪和统一错误 |
+| 业务服务 | `lib/services/`，实体编辑、服务端计算、复核状态、版本与成员 |
+| 数据访问 | `lib/repositories/`，关系表、事务批次、条件版本与快照 |
+| 领域规则 | `lib/domain/`，输入、引用、方案就绪检查与计算规则 |
 | 路径与模型核心 | `public/platform/core.js`；构建时生成服务端 ESM 和测试 CJS |
 | 结构化项目 | Cloudflare D1，绑定名 `DB` |
 | 场地底图 | Cloudflare R2，绑定名 `BUCKET` |
@@ -34,7 +39,7 @@
 
 登录由 Sites 托管平台完成，本应用不处理密码。生产身份来自平台注入的请求身份，不能把未经认证的直接 Worker 入口暴露为另一条访问通道。跨站写请求被拒绝，客户端不能指定项目归属用户。开发环境模拟登录不会打入生产构建。
 
-每账号最多 30 个项目（含归档），每小时最多 240 次写入请求。底图最大 2 MB；模型正文不含底图最大 900 KB。归档可恢复，永久删除需先归档并检查版本。底图拆入对象存储，避免超过 [D1 单行大小限制](https://developers.cloudflare.com/d1/platform/limits/)。
+每账号最多拥有 30 个项目（含归档），每项目最多 20 位协作成员；支持所有者、编辑者和查看者。读请求每分钟最多 300 次，写请求每小时最多 240 次。底图最大 2 MB；模型正文不含底图最大 900 KB。归档可恢复，永久删除需先归档并检查版本。底图拆入对象存储，避免超过 [D1 单行大小限制](https://developers.cloudflare.com/d1/platform/limits/)。
 
 ## 本地开发
 
@@ -49,6 +54,7 @@ npm run build
 
 ```powershell
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_ordinary_red_hulk.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_fixed_jasper_sitwell.sql
 npm run dev -- --port 5175 --hostname 127.0.0.1
 ```
 
@@ -70,12 +76,13 @@ npm test
 node node_modules/typescript/bin/tsc --noEmit
 ```
 
-19 项核心/API 测试覆盖路径计算、用户隔离、模型校验、跨站写入、版本冲突、底图保存、归档恢复和数量限制。API 测试使用内存 SQLite，不读取真实云端项目。
+核心/API 测试覆盖路径计算、关系表、外键、事务回滚、用户隔离、成员角色、复核状态、幂等、限流、版本冲突、底图保存、历史恢复、旧数据迁移和数量限制。API 测试使用内存 SQLite，不读取真实云端项目。
 
 浏览器回归需另行提供 Playwright 和 Chrome。启动本地开发服务后：
 
 ```powershell
 node tests/cloud-browser.cjs
+node tests/backend-browser.cjs
 ```
 
 可设置 `CHROME_PATH` 和 `TEST_BASE_URL`。浏览器测试只在本地模拟登录环境运行，验证两个独立浏览器的保存读取、版本冲突、底图、断网重试、归档恢复、退出隔离和响应式布局。

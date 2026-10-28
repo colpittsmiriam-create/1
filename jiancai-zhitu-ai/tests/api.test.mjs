@@ -4,17 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {projectApi} from '../lib/project-api.mjs';
 import Core from '../lib/core.cjs';
-function fixture(){
- const sqlite=new DatabaseSync(':memory:');sqlite.exec(readFileSync(new URL('../drizzle/0000_ordinary_red_hulk.sql',import.meta.url),'utf8').replaceAll('--> statement-breakpoint',''));
- const DB={prepare(sql){return {values:[],bind(...values){this.values=values;return this;},async first(){return sqlite.prepare(sql).get(...this.values)||null;},async all(){return {results:sqlite.prepare(sql).all(...this.values)};},async run(){const r=sqlite.prepare(sql).run(...this.values);return {meta:{changes:Number(r.changes)}};}};}};
- const objects=new Map(),BUCKET={async put(key,data,options){objects.set(key,{data:new Uint8Array(data),type:options.httpMetadata.contentType});},async get(key){const value=objects.get(key);return value?{arrayBuffer:async()=>value.data.buffer,httpMetadata:{contentType:value.type}}:null;},async delete(key){objects.delete(key);}};
- const env={DB,BUCKET},alice={userId:'alice',displayName:'Alice',email:'alice@example.test'},bob={userId:'bob',displayName:'Bob',email:'bob@example.test'};
- const call=async(path,method='GET',body,user=alice,version=null,origin='https://test.example')=>{
-  const request=new Request('https://test.example/api/'+path,{method,headers:{...(body?{'Content-Type':'application/json'}:{}),...(version?{'If-Match':`"${version}"`}:{}),Origin:origin},...(body?{body:JSON.stringify(body)}:{})});
-  const response=await projectApi(request,env,user,path.split('?')[0].split('/'));return {status:response.status,data:await response.json()};
- };
- return {call,objects,sqlite,alice,bob};
-}
+import {fixture} from './helpers.mjs';
 test('匿名可取会话与健康状态，不能读写云端项目',async()=>{
  const f=fixture();assert.equal((await f.call('session','GET',null,null)).data.user,null);assert.equal((await f.call('health')).status,200);
  assert.equal((await f.call('projects','GET',null,null)).status,401);assert.equal((await f.call('projects','POST',{project:Core.createProject()},null)).status,401);
@@ -35,11 +25,11 @@ test('并发保存只接受一个相同基础版本；服务器计算读取新�
  assert.equal(a.status,200);assert.equal(b.status,409);assert.equal((await f.call('projects/'+data.id+'/calculate')).data.result.distance,160);
  assert.equal((await f.call('projects/'+data.id)).data.version,2);
 });
-test('底图独立持久化并完整恢复，更换/删除时清理旧文件',async()=>{
+test('底图持久化，历史版本仍引用的底图不会提前删除',async()=>{
  const f=fixture(),p=Core.createProject();p.background='data:image/png;base64,YWJj';const {data}=await f.call('projects','POST',{project:p});assert.equal(f.objects.size,1);
  assert.equal((await f.call('projects/'+data.id)).data.project.background,p.background);
- p.background='data:image/webp;base64,ZGVm';await f.call('projects/'+data.id,'PUT',{project:p},f.alice,1);assert.equal(f.objects.size,1);
- p.background=null;await f.call('projects/'+data.id,'PUT',{project:p},f.alice,2);assert.equal(f.objects.size,0);
+ p.background='data:image/webp;base64,ZGVm';await f.call('projects/'+data.id,'PUT',{project:p},f.alice,1);assert.equal(f.objects.size,2);
+ p.background=null;await f.call('projects/'+data.id,'PUT',{project:p},f.alice,2);assert.equal(f.objects.size,2);
 });
 test('归档可恢复，永久删除要求先归档，删除同样使用版本检查',async()=>{
  const f=fixture(),{data}=await f.call('projects','POST',{project:Core.createProject()}),id=data.id;
@@ -52,7 +42,7 @@ test('归档可恢复，永久删除要求先归档，删除同样使用版本�
  assert.equal((await f.call('projects/'+id+'/permanent','DELETE',null,f.alice,4)).status,200);assert.equal((await f.call('projects?archived=1')).data.projects.length,0);
 });
 test('错误内容类型与损坏 JSON 返回明确错误',async()=>{
- const f=fixture();const response=await projectApi(new Request('https://test.example/api/projects',{method:'POST',headers:{Origin:'https://test.example','Content-Type':'application/json'},body:'{bad'}),{DB:{prepare:()=>({bind:()=>({run:async()=>({meta:{changes:1}})})})},BUCKET:{}},f.alice,['projects']);
+ const f=fixture();const response=await projectApi(new Request('https://test.example/api/projects',{method:'POST',headers:{Origin:'https://test.example','Content-Type':'application/json'},body:'{bad'}),f.env,f.alice,['projects']);
  assert.equal(response.status,400);
 });
 test('单账号项目数量限制在服务端执行',async()=>{

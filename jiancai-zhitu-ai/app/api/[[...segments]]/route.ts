@@ -6,4 +6,4 @@ async function handle(request:Request,context:{params:Promise<{segments?:string[
  const {segments=[]}=await context.params;
  return projectApi(request,env,await getChatGPTUser(),segments);
 }
-export {handle as GET,handle as POST,handle as PUT,handle as DELETE};
+export {handle as GET,handle as POST,handle as PUT,handle as PATCH,handle as DELETE};

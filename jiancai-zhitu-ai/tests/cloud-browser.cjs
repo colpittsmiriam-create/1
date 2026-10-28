@@ -24,7 +24,7 @@ const base=process.env.TEST_BASE_URL||'http://127.0.0.1:5175';
   await q.evaluate(()=>Cloud.reload());assert.ok((await data(q)).background);console.log('PASS persistent background across devices');
   await editName(p,name+'_最新');await flush(p);
   // Keep q open at its stale version; editing this form must not overwrite p.
-  await q.locator('#nav a[href="#site"]').click();await q.locator('[data-form=site] [name=name]').fill(name+'_本机');await q.locator('[data-form=site] button[type=submit]').click();await q.evaluate(()=>Cloud.flush().catch(()=>{}));assert.equal(await q.evaluate(()=>Cloud.info().blocked),true);
+  await q.locator('#nav a[href="#site"]').click();await q.locator('[data-form=site] [name=name]').fill(name+'_本机');await q.locator('[data-form=site] button[type=submit]').click();await q.waitForFunction(()=>Cloud.info().blocked);assert.equal(await q.evaluate(()=>Cloud.info().blocked),true);
   assert.equal((await (await a.request.get(base+'/api/projects/'+original)).json()).project.name,name+'_最新');
   await q.locator('#account').click();await cloudClick(q,'fork');await q.waitForFunction(id=>Cloud.info().current.id!==id,original);const forkId=await q.evaluate(()=>Cloud.info().current.id);assert.equal((await data(q)).name,name+'_本机');console.log('PASS conflict protection and save as a new project');
   await q.locator('#account').click();await cloudClick(q,'archive-confirm',forkId);await cloudClick(q,'archive',forkId);await cloudClick(q,'archives');await q.locator(`[data-cloud=restore][data-id="${forkId}"]`).waitFor();await cloudClick(q,'restore',forkId);await q.waitForFunction(id=>Cloud.info().current.id===id,forkId);console.log('PASS project archive and restore');
